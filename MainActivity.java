@@ -15,10 +15,20 @@ import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
+import com.android.volley.AuthFailureError;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.Volley;
+
 import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -26,13 +36,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
+import java.util.Timer;
+import java.util.TimerTask;
 
 // ------------------------------------------------------------------
 // ------------------------------------------------------------------
 
 public class MainActivity extends AppCompatActivity {
-
+private TextView textoMuestra;
+private int cont=0;
+    Medida medida = new Medida();
+    String URL ="http://192.168.0.20:80/develop/insertar_medida.php";
+    Context context;
     // --------------------------------------------------------------
     // --------------------------------------------------------------
     private static final String ETIQUETA_LOG = ">>>>";
@@ -129,7 +144,26 @@ public class MainActivity extends AppCompatActivity {
         Log.d(ETIQUETA_LOG, " txPower  = " + Integer.toHexString(tib.getTxPower()) + " ( " + tib.getTxPower() + " )");
         Log.d(ETIQUETA_LOG, " ****************************************************");
 
+        if(cont==0){
+            //pruebas para ver si va
 
+            /*DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+            dtf.format(LocalDateTime.now());
+            medida.fecha = dtf.format(LocalDateTime.now());
+            medida.medida= "PEPE";
+            medida.latitud = rssi;
+            medida.longitud = rssi;
+            String res = medida.getMedida() + medida.getFecha();
+            textoMuestra.setText(res);
+            cont ++;
+            LogicaFake envio = new LogicaFake(URL,medida);
+            context=getApplicationContext();
+            envio.setContext(context);
+            envio.guardarMedida();
+
+            //enviarMedida(URL,medida);*/
+            //medida = obtenerMedida(resultado);
+        }
 
 
     } // ()
@@ -150,7 +184,18 @@ public class MainActivity extends AppCompatActivity {
             public void onScanResult( int callbackType, ScanResult resultado ) {
                 super.onScanResult(callbackType, resultado);
 
-                buscarTodosLosDispositivosBTLE();
+                byte[] bytes = resultado.getScanRecord().getBytes();
+                TramaIBeacon tib = new TramaIBeacon(bytes);
+                String uuid = Utilidades.bytesToHexString(tib.getUUID());
+                Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): Buscando: "+dispositivoBuscado+" y se ha encontrado: " +uuid);
+
+
+                if(Objects.equals(uuid, dispositivoBuscado)){
+
+                    obtenerMedida( resultado );
+
+
+                }
 
             }
 
@@ -186,7 +231,7 @@ public class MainActivity extends AppCompatActivity {
         if ( this.callbackDelEscaneo == null ) {
             return;
         }
-
+        cont=0;
         this.elEscanner.stopScan( this.callbackDelEscaneo );
         this.callbackDelEscaneo = null;
 
@@ -203,11 +248,10 @@ public class MainActivity extends AppCompatActivity {
     // --------------------------------------------------------------
     public void botonBuscarNuestroDispositivoBTLEPulsado( View v ) {
         Log.d(ETIQUETA_LOG, " boton nuestro dispositivo BTLE Pulsado" );
-       //cuando se pulsa el boton
-        // se busca el dispositivo con el uuid que hemos introducido
-        String nombre= "ba:be:ba:be:ba:be:ba:be:ba:12:34:56:78:10:e1:04:";//la uuid
+        //this.buscarEsteDispositivoBTLE( Utilidades.stringToUUID( "EPSG-GTI-PROY-3A" ) );
+        String nombre= "ba:be:ba:be:ba:be:ba:be:ba:12:34:56:78:10:e1:04:";
 
-        buscarEsteDispositivoBTLE( nombre );//llamamos a la función
+        buscarEsteDispositivoBTLE( nombre );
 
     } // ()
 
@@ -221,14 +265,14 @@ public class MainActivity extends AppCompatActivity {
     // --------------------------------------------------------------
     // --------------------------------------------------------------
     @SuppressLint("MissingPermission")
-    private void inicializarBlueTooth() {//funcion para iniciar el escaneo
+    private void inicializarBlueTooth() {
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): obtenemos adaptador BT ");
 
-        BluetoothAdapter bta = BluetoothAdapter.getDefaultAdapter();// para iniciar  el bluetooth hace falta el adaptador
+        BluetoothAdapter bta = BluetoothAdapter.getDefaultAdapter();
 
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): habilitamos adaptador BT ");
 
-        bta.enable();// se activa
+        bta.enable();
 
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): habilitado =  " + bta.isEnabled() );
 
@@ -236,7 +280,7 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): obtenemos escaner btle ");
 
-        this.elEscanner = bta.getBluetoothLeScanner();//se inicia el escaneo asociando al objeto bta el escaner
+        this.elEscanner = bta.getBluetoothLeScanner();
 
         if ( this.elEscanner == null ) {
             Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): Socorro: NO hemos obtenido escaner btle  !!!!");
@@ -244,19 +288,19 @@ public class MainActivity extends AppCompatActivity {
         }
 
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): voy a perdir permisos (si no los tuviera) !!!!");
-        //Pedimos los permisos comprobando si no se han dado
+
         if (
                 ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED
                         || ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED
                         || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
         )
-        {//si no se han dado se hace la peticion de pedir permisos
+        {
             ActivityCompat.requestPermissions(
                     MainActivity.this,
                     new String[]{Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.ACCESS_FINE_LOCATION},
                     CODIGO_PETICION_PERMISOS);
         }
-        else {//si ya se han dado
+        else {
             Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): parece que YA tengo los permisos necesarios !!!!");
 
         }
@@ -270,7 +314,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
+        textoMuestra = (TextView)findViewById(R.id.medidaTxt);
         Log.d(ETIQUETA_LOG, " onCreate(): empieza ");
 
         inicializarBlueTooth();
@@ -304,7 +348,69 @@ public class MainActivity extends AppCompatActivity {
         // Other 'case' lines to check for other
         // permissions this app might request.
     } // ()
+    public Medida obtenerMedida(ScanResult resultado){
+        //definimos las variables
+        Medida medida= new Medida();
+        BluetoothDevice dispositivo = resultado.getDevice();
+        byte[] bytes = resultado.getScanRecord().getBytes();
+        TramaIBeacon tib = new TramaIBeacon(bytes);
 
+        //la fecha siempre obtener fecha
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+        medida.fecha = dtf.format(LocalDateTime.now());
+
+        //obtener medida
+        int numero = (int)(Math.random()*(75-25+1)+25);
+        String valorTxt = String.valueOf(numero);
+        medida.valor= valorTxt;
+
+        //longitud
+        medida.longitud = resultado.getRssi();
+        int longitud = medida.getLongitud();
+
+
+
+
+        String res = medida.getValor()+ medida.getLongitud() + medida.getFecha();
+        textoMuestra.setText(res);
+        cont ++;
+        LogicaFake envio = new LogicaFake(URL,medida);//creamos el objeto de tipo Logica Fake
+        context=getApplicationContext();
+        envio.setContext(context);
+        envio.guardarMedida();
+
+
+        return  medida;
+    }
+    /*private void enviarMedida(String URL, Medida measure){
+        StringRequest stringRequest = new StringRequest(Request.Method.POST, URL, new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                Toast.makeText(getApplicationContext(), "Operacion resuelta correctamente", Toast.LENGTH_SHORT).show();
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                Toast.makeText(getApplicationContext(), error.toString(), Toast.LENGTH_SHORT).show();
+            }
+
+
+
+        }){
+            @Nullable
+            @Override
+            protected Map<String, String> getParams() throws AuthFailureError {
+                Map<String,String> parametros= new HashMap<String,String>();
+                String id = measure.getMedida();
+                String numero = measure.getFecha();
+                parametros.put("id",id);
+                parametros.put("numero", numero);
+                return parametros;
+            }
+        };
+        RequestQueue requestQueue= Volley.newRequestQueue(this);
+        requestQueue.add(stringRequest);
+    }*/
 
 } // class
 // --------------------------------------------------------------
