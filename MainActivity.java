@@ -11,6 +11,8 @@ import android.bluetooth.le.ScanResult;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.os.CountDownTimer;
+import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
@@ -43,11 +45,12 @@ import java.util.TimerTask;
 // ------------------------------------------------------------------
 
 public class MainActivity extends AppCompatActivity {
-private TextView textoMuestra;
-private int cont=0;
+    private TextView textoMuestra;//texto para visualizar cada medida que se realiza
+    private int cont=1;
     Medida medida = new Medida();
-    String URL ="http://192.168.0.20:80/develop/insertar_medida.php";
+    String URL ="http://192.168.18.7/develop/insertar_medida.php";//cambiar ip para cuando
     Context context;
+
     // --------------------------------------------------------------
     // --------------------------------------------------------------
     private static final String ETIQUETA_LOG = ">>>>";
@@ -144,10 +147,10 @@ private int cont=0;
         Log.d(ETIQUETA_LOG, " txPower  = " + Integer.toHexString(tib.getTxPower()) + " ( " + tib.getTxPower() + " )");
         Log.d(ETIQUETA_LOG, " ****************************************************");
 
-        if(cont==0){
+         /*if(cont==0){
             //pruebas para ver si va
 
-            /*DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
+           DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
             dtf.format(LocalDateTime.now());
             medida.fecha = dtf.format(LocalDateTime.now());
             medida.medida= "PEPE";
@@ -161,9 +164,9 @@ private int cont=0;
             envio.setContext(context);
             envio.guardarMedida();
 
-            //enviarMedida(URL,medida);*/
+            //enviarMedida(URL,medida);
             //medida = obtenerMedida(resultado);
-        }
+        }*/
 
 
     } // ()
@@ -190,11 +193,10 @@ private int cont=0;
                 Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): Buscando: "+dispositivoBuscado+" y se ha encontrado: " +uuid);
 
 
-                if(Objects.equals(uuid, dispositivoBuscado)){
-
+                if(Objects.equals(uuid, dispositivoBuscado) && cont ==1){
                     obtenerMedida( resultado );
-
-
+                    cont --;
+                    iniciarCuentaAtras();
                 }
 
             }
@@ -231,7 +233,7 @@ private int cont=0;
         if ( this.callbackDelEscaneo == null ) {
             return;
         }
-        cont=0;
+        cont=1;
         this.elEscanner.stopScan( this.callbackDelEscaneo );
         this.callbackDelEscaneo = null;
 
@@ -248,10 +250,11 @@ private int cont=0;
     // --------------------------------------------------------------
     public void botonBuscarNuestroDispositivoBTLEPulsado( View v ) {
         Log.d(ETIQUETA_LOG, " boton nuestro dispositivo BTLE Pulsado" );
-        //this.buscarEsteDispositivoBTLE( Utilidades.stringToUUID( "EPSG-GTI-PROY-3A" ) );
-        String nombre= "ba:be:ba:be:ba:be:ba:be:ba:12:34:56:78:10:e1:04:";
+        //cuando se pulsa el boton
+        // se busca el dispositivo con el uuid que hemos introducido
+        String nombre= "ba:be:ba:be:ba:be:ba:be:ba:12:34:56:78:10:e1:04:";//la uuid
 
-        buscarEsteDispositivoBTLE( nombre );
+        buscarEsteDispositivoBTLE( nombre );//llamamos a la función
 
     } // ()
 
@@ -259,20 +262,20 @@ private int cont=0;
     // --------------------------------------------------------------
     public void botonDetenerBusquedaDispositivosBTLEPulsado( View v ) {
         Log.d(ETIQUETA_LOG, " boton detener busqueda dispositivos BTLE Pulsado" );
-        this.detenerBusquedaDispositivosBTLE();
+        detenerBusquedaDispositivosBTLE();
     } // ()
 
     // --------------------------------------------------------------
     // --------------------------------------------------------------
     @SuppressLint("MissingPermission")
-    private void inicializarBlueTooth() {
+    private void inicializarBlueTooth() {//funcion para iniciar el escaneo
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): obtenemos adaptador BT ");
 
-        BluetoothAdapter bta = BluetoothAdapter.getDefaultAdapter();
+        BluetoothAdapter bta = BluetoothAdapter.getDefaultAdapter();// para iniciar  el bluetooth hace falta el adaptador
 
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): habilitamos adaptador BT ");
 
-        bta.enable();
+        bta.enable();// se activa
 
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): habilitado =  " + bta.isEnabled() );
 
@@ -280,7 +283,7 @@ private int cont=0;
 
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): obtenemos escaner btle ");
 
-        this.elEscanner = bta.getBluetoothLeScanner();
+        this.elEscanner = bta.getBluetoothLeScanner();//se inicia el escaneo asociando al objeto bta el escaner
 
         if ( this.elEscanner == null ) {
             Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): Socorro: NO hemos obtenido escaner btle  !!!!");
@@ -288,19 +291,19 @@ private int cont=0;
         }
 
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): voy a perdir permisos (si no los tuviera) !!!!");
-
+        //Pedimos los permisos comprobando si no se han dado
         if (
                 ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH) != PackageManager.PERMISSION_GRANTED
                         || ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_ADMIN) != PackageManager.PERMISSION_GRANTED
                         || ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED
         )
-        {
+        {//si no se han dado se hace la peticion de pedir permisos
             ActivityCompat.requestPermissions(
                     MainActivity.this,
                     new String[]{Manifest.permission.BLUETOOTH, Manifest.permission.BLUETOOTH_ADMIN, Manifest.permission.ACCESS_FINE_LOCATION},
                     CODIGO_PETICION_PERMISOS);
         }
-        else {
+        else {//si ya se han dado
             Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): parece que YA tengo los permisos necesarios !!!!");
 
         }
@@ -369,11 +372,11 @@ private int cont=0;
         int longitud = medida.getLongitud();
 
 
-
-
+        //Esto es para llenar el text view que estan bajo de los botones
         String res = medida.getValor()+ medida.getLongitud() + medida.getFecha();
         textoMuestra.setText(res);
-        cont ++;
+        //cont ++;
+
         LogicaFake envio = new LogicaFake(URL,medida);//creamos el objeto de tipo Logica Fake
         context=getApplicationContext();
         envio.setContext(context);
@@ -382,6 +385,22 @@ private int cont=0;
 
         return  medida;
     }
+    private void iniciarCuentaAtras(){
+        new CountDownTimer(5000,1000){
+
+            @Override
+            public void onTick(long l) {
+
+            }
+
+            @Override
+            public void onFinish() {
+                cont++;
+            }
+        }.start();
+    }
+
+
     /*private void enviarMedida(String URL, Medida measure){
         StringRequest stringRequest = new StringRequest(Request.Method.POST, URL, new Response.Listener<String>() {
             @Override
