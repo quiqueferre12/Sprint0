@@ -12,45 +12,30 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Handler;
 import android.util.Log;
 import android.view.View;
 import android.widget.TextView;
-import android.widget.Toast;
-
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
-import com.android.volley.AuthFailureError;
-import com.android.volley.Request;
-import com.android.volley.RequestQueue;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.Volley;
-
-import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.Timer;
-import java.util.TimerTask;
 
-// ------------------------------------------------------------------
-// ------------------------------------------------------------------
+
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Clase Main Activity
+// Autor: Enrique Ferre Carbonell
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 public class MainActivity extends AppCompatActivity {
-    private TextView textoMuestra;//texto para visualizar cada medida que se realiza
-    private int cont=1;
-    Medida medida = new Medida();
-    String URL ="http://192.168.18.7/develop/insertar_medida.php";//cambiar ip para cuando
-    Context context;
-
+    // --------------------------------------------------------------
+    // --------------------------------------------------------------
+    private TextView textoMuestra;//texto para visualizar cada medida que se realiza en el xml
+    private boolean emitiendo =true;//varaible para alternar entre medidas
+    String URL ="http://192.168.0.20/develop/insertar_medida.php";//cambiar ip para cuando se use
+    Context context;//contexto de mainActivity
     // --------------------------------------------------------------
     // --------------------------------------------------------------
     private static final String ETIQUETA_LOG = ">>>>";
@@ -63,8 +48,10 @@ public class MainActivity extends AppCompatActivity {
 
     private ScanCallback callbackDelEscaneo = null;
 
-    // --------------------------------------------------------------
-    // --------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion buscar todos los dispositivos
+    // Disenyo     buscarTodosLosDispositivosBTLE() --> Resultado Scaneo
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     @SuppressLint("MissingPermission")
     private void buscarTodosLosDispositivosBTLE() {
         Log.d(ETIQUETA_LOG, " buscarTodosLosDispositivosBTL(): empieza ");
@@ -73,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
 
         this.callbackDelEscaneo = new ScanCallback() {
             @Override
-            public void onScanResult( int callbackType, ScanResult resultado ) {
+            public void onScanResult( int callbackType, ScanResult resultado ) {//Devolución de llamada cuando se ha encontrado un BTLE.
                 super.onScanResult(callbackType, resultado);
                 Log.d(ETIQUETA_LOG, " buscarTodosLosDispositivosBTL(): onScanResult() ");
 
@@ -81,14 +68,14 @@ public class MainActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onBatchScanResults(List<ScanResult> results) {
+            public void onBatchScanResults(List<ScanResult> results) {//Devolución de llamada cuando se entregan los resultados del lote
                 super.onBatchScanResults(results);
                 Log.d(ETIQUETA_LOG, " buscarTodosLosDispositivosBTL(): onBatchScanResults() ");
 
             }
 
             @Override
-            public void onScanFailed(int errorCode) {
+            public void onScanFailed(int errorCode) {//Devolución de llamada cuando no se pudo iniciar el escaneo
                 super.onScanFailed(errorCode);
                 Log.d(ETIQUETA_LOG, " buscarTodosLosDispositivosBTL(): onScanFailed() ");
 
@@ -99,10 +86,12 @@ public class MainActivity extends AppCompatActivity {
 
         this.elEscanner.startScan( this.callbackDelEscaneo);
 
-    } // ()
+    } // fin buscarDispositivosBTLE()
 
-    // --------------------------------------------------------------
-    // --------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion mostrar informacion dispositivio btle
+    // Disenyo    ScanResult --> mostrarInformacionDispositivoBTLE()
+    //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     @SuppressLint("MissingPermission")
     private void mostrarInformacionDispositivoBTLE(ScanResult resultado ) {
 
@@ -169,12 +158,14 @@ public class MainActivity extends AppCompatActivity {
         }*/
 
 
-    } // ()
+    } // fin mostrarInformacionDispositivoBTLE()
 
-    // --------------------------------------------------------------
-    // --------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion buscar este dispositivo BTLE
+    // Disenyo    String --> buscarEsteDispositivoBTLE() --> Resultado Scaneo
+    //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     @SuppressLint("MissingPermission")
-    private void buscarEsteDispositivoBTLE( String dispositivoBuscado ) {
+    private void buscarEsteDispositivoBTLE(String dispositivoBuscado ) {
         Log.d(ETIQUETA_LOG, " buscarEsteDispositivoBTLE(): empieza ");
 
         Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): instalamos scan callback ");
@@ -182,62 +173,56 @@ public class MainActivity extends AppCompatActivity {
 
         // super.onScanResult(ScanSettings.SCAN_MODE_LOW_LATENCY, result); para ahorro de energía
 
-        this.callbackDelEscaneo = new ScanCallback() {
+        this.callbackDelEscaneo = new ScanCallback() {//Devoluciones de llamada de exploración de Bluetooth LE
             @Override
-            public void onScanResult( int callbackType, ScanResult resultado ) {
+            public void onScanResult( int callbackType, ScanResult resultado ) {//Devolución de llamada cuando se ha encontrado un BTLE.
                 super.onScanResult(callbackType, resultado);
 
+                // hacemos la conversion del ScanResult
                 byte[] bytes = resultado.getScanRecord().getBytes();
+                //gastamos la clase TramaBeacon para obtener el uuid
                 TramaIBeacon tib = new TramaIBeacon(bytes);
-                String uuid = Utilidades.bytesToHexString(tib.getUUID());
-                Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): Buscando: "+dispositivoBuscado+" y se ha encontrado: " +uuid);
+                String nombre = resultado.getDevice().getName();
+                Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): Buscando: "+dispositivoBuscado+" y se ha encontrado: " + nombre);
 
 
-                if(Objects.equals(uuid, dispositivoBuscado) && cont ==1){
-                    obtenerMedida( resultado );
-                    cont --;
-                    iniciarCuentaAtras();
+                if(Objects.equals(nombre, dispositivoBuscado) && emitiendo ==true){//Si han pasado 5 seg y coincide con la uuid que buscabamos en la variable dispositivoBuscado
+                    obtenerMedida( resultado );//llamamos a la funcion obtener medida
+                    emitiendo = false;//cambiamos esta variable a flaso para que no vuelva a entrar en la condicion if hasta que no acabe la cuenta atras
+                    long num = 5000;// indicamos el tiempo en milisegundos que tardara hasta la siguiente medida
+                    iniciarCuentaAtras(num);//llamamos a la funcion para que cuando el tiempo llegue a 0 la variable emitiendo cambie a true
                 }
 
             }
 
-            @Override
-            public void onBatchScanResults(List<ScanResult> results) {
-                super.onBatchScanResults(results);
-                Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): Encontrado ");
-
-            }
 
             @Override
             public void onScanFailed(int errorCode) {
                 super.onScanFailed(errorCode);
-                Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): onScanFailed() ");
+                Log.d(ETIQUETA_LOG, "  Error al intentar buscar dispositivo");
 
             }
         };
 
-        ScanFilter sf = new ScanFilter.Builder().setDeviceName( dispositivoBuscado ).build();
-
-        Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): empezamos a escanear buscando: " + dispositivoBuscado );
-        //Log.d(ETIQUETA_LOG, "  buscarEsteDispositivoBTLE(): empezamos a escanear buscando: " + dispositivoBuscado
-        //      + " -> " + Utilidades.stringToUUID( dispositivoBuscado ) );
 
         this.elEscanner.startScan( this.callbackDelEscaneo );
     } // ()
 
-    // --------------------------------------------------------------
-    // --------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion detener busqueda dispositivo BTLE
+    // Disenyo    detenerBusquedaDispositivosBTLE() --> Resultado Scaneo
+    //-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     @SuppressLint("MissingPermission")
     private void detenerBusquedaDispositivosBTLE() {
 
         if ( this.callbackDelEscaneo == null ) {
             return;
         }
-        cont=1;
+        emitiendo=false;// Ponemos la variable en falso para evitar que entre en el bucle dado que entre dentro de buscar dispositivo asi no emitira mas
         this.elEscanner.stopScan( this.callbackDelEscaneo );
         this.callbackDelEscaneo = null;
 
-    } // ()
+    } //fin detenerBusquedaDispositivosBTLE()
 
     // --------------------------------------------------------------
     // --------------------------------------------------------------
@@ -252,8 +237,8 @@ public class MainActivity extends AppCompatActivity {
         Log.d(ETIQUETA_LOG, " boton nuestro dispositivo BTLE Pulsado" );
         //cuando se pulsa el boton
         // se busca el dispositivo con el uuid que hemos introducido
-        String nombre= "ba:be:ba:be:ba:be:ba:be:ba:12:34:56:78:10:e1:04:";//la uuid
-
+        String nombre= "GTI-3AQuique";//el nombre
+        emitiendo= true;
         buscarEsteDispositivoBTLE( nombre );//llamamos a la función
 
     } // ()
@@ -265,8 +250,10 @@ public class MainActivity extends AppCompatActivity {
         detenerBusquedaDispositivosBTLE();
     } // ()
 
-    // --------------------------------------------------------------
-    // --------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion obtener Meida
+    // Disenyo   inicializarBluetooth() -->  ScanResult
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     @SuppressLint("MissingPermission")
     private void inicializarBlueTooth() {//funcion para iniciar el escaneo
         Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): obtenemos adaptador BT ");
@@ -307,7 +294,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d(ETIQUETA_LOG, " inicializarBlueTooth(): parece que YA tengo los permisos necesarios !!!!");
 
         }
-    } // ()
+    } // fin inicializarBlueTooth()
 
 
     // --------------------------------------------------------------
@@ -324,10 +311,12 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d(ETIQUETA_LOG, " onCreate(): termina ");
 
-    } // onCreate()
+    } // fin onCreate()
 
-    // --------------------------------------------------------------
-    // --------------------------------------------------------------
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion obtener permisos
+    // Disenyo    R, Txt, R--> obtenerMeida()
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
     public void onRequestPermissionsResult(int requestCode, String[] permissions,
                                            int[] grantResults) {
         super.onRequestPermissionsResult( requestCode, permissions, grantResults);
@@ -350,22 +339,28 @@ public class MainActivity extends AppCompatActivity {
         }
         // Other 'case' lines to check for other
         // permissions this app might request.
-    } // ()
-    public Medida obtenerMedida(ScanResult resultado){
+    } // fin onRequestPermissionsResult()
+
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion obtener Meida
+    // Disenyo    ScanResult--> obtenerMeida() --> Medida(Logica Fake)
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    public void obtenerMedida(ScanResult resultado){
         //definimos las variables
         Medida medida= new Medida();
-        BluetoothDevice dispositivo = resultado.getDevice();
         byte[] bytes = resultado.getScanRecord().getBytes();
         TramaIBeacon tib = new TramaIBeacon(bytes);
 
         //la fecha siempre obtener fecha
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
-        medida.fecha = dtf.format(LocalDateTime.now());
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");//definimos un objeto de tipo date time formatter para establecer fecha e hora
+        medida.setFecha(dtf.format(LocalDateTime.now()));
 
         //obtener medida
+        /*
         int numero = (int)(Math.random()*(75-25+1)+25);
         String valorTxt = String.valueOf(numero);
-        medida.valor= valorTxt;
+        medida.setValor(valorTxt);*/
+        medida.setValor(Utilidades.bytesToString(tib.getUUID()));
 
         //longitud
         medida.longitud = resultado.getRssi();
@@ -373,7 +368,7 @@ public class MainActivity extends AppCompatActivity {
 
 
         //Esto es para llenar el text view que estan bajo de los botones
-        String res = medida.getValor()+ medida.getLongitud() + medida.getFecha();
+        String res = medida.getValor()+ longitud + medida.getFecha();
         textoMuestra.setText(res);
         //cont ++;
 
@@ -383,22 +378,27 @@ public class MainActivity extends AppCompatActivity {
         envio.guardarMedida();
 
 
-        return  medida;
-    }
-    private void iniciarCuentaAtras(){
-        new CountDownTimer(5000,1000){
+
+    }//fin obtenerMedida()
+
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion Iniciar cuenta atras
+    // Disenyo   Z --> iniciarCuentaAtras() --> TRUE
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    private void iniciarCuentaAtras(long numero){
+        new CountDownTimer(numero,1000){
 
             @Override
-            public void onTick(long l) {
+            public void onTick(long l) {//durante el transcurso del tiempo que esta en marcha el CountDownTimer que tiene que hacer
 
             }
 
             @Override
-            public void onFinish() {
-                cont++;
+            public void onFinish() {// que tiene que hcer cuando acabe
+                emitiendo = true;
             }
         }.start();
-    }
+    }//fin iniciarCuentaAtras()
 
 
     /*private void enviarMedida(String URL, Medida measure){
