@@ -1,24 +1,26 @@
 package com.example.emjeplobeacon;
-
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Clase Medida
+// Autor: Enrique Ferre Carbonell
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 public class Medida {
+    //Atributos----------------------------------------------
     public String valor;
     public  String fecha;
-    public double latitud;
     public int longitud;
-
+    //Constructores----------------------------------------------------
     public Medida(){
 
     }
 
-    public Medida(String medida, String fecha, double latitud, int longitud) {
+    public Medida(String medida, String fecha, int longitud) {
         this.valor = medida;
         this.fecha = fecha;
-        this.latitud = latitud;
         this.longitud = longitud;
     }
 
 
-
+    //Getters y setters----------------------------------------------------------------------
     public String getValor() {
         return valor;
     }
@@ -35,13 +37,7 @@ public class Medida {
         this.fecha = fecha;
     }
 
-    public double getLatitud() {
-        return latitud;
-    }
 
-    public void setLatitud(double latitud) {
-        this.latitud = latitud;
-    }
 
     public int getLongitud() {
         return longitud;
@@ -51,13 +47,12 @@ public class Medida {
         this.longitud = longitud;
     }
 
-
+    //metodos--------------------------------------------------------------------
     @Override
     public String toString() {
         return "Medida{" +
                 "valor=" + valor +
                 ", fecha=" + fecha +
-                ", latitud=" + latitud +
                 ", longitud=" + longitud +
                 '}';
     }

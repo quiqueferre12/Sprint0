@@ -372,10 +372,10 @@ public class MainActivity extends AppCompatActivity {
         textoMuestra.setText(res);
         //cont ++;
 
-        LogicaFake envio = new LogicaFake(URL,medida);//creamos el objeto de tipo Logica Fake
+        LogicaFake envio = new LogicaFake(URL);//creamos el objeto de tipo Logica Fake
         context=getApplicationContext();
         envio.setContext(context);
-        envio.guardarMedida();
+        envio.insertarMedida(medida);
 
 
 

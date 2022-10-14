@@ -17,9 +17,12 @@ import com.android.volley.toolbox.Volley;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
-
+//---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// Clase Logica Fake
+// Autor: Enrique Ferre Carbonell
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 public class LogicaFake {
-    private static final String ETIQUETA_LOG = ">>>>";
+
     public String URL;
     public Medida medida;
    public Context context;
@@ -27,6 +30,9 @@ public class LogicaFake {
     //Constructores--------------------------------
     public LogicaFake() {
 
+    }
+    public LogicaFake(String URL) {
+        this.URL = URL;
     }
     public LogicaFake(String URL, Medida medida) {
         this.URL = URL;
@@ -58,7 +64,11 @@ public class LogicaFake {
     }
     //Metodos----------------------------------------------------------------------
 
-    public void guardarMedida(){
+    //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    // Funcion  insertarMedida
+    // Disenyo    Medida, URL, Contexto --> insertarMedida()
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    public void insertarMedida(Medida medida){
         StringRequest stringRequest = new StringRequest(Request.Method.POST, URL, new Response.Listener<String>() {
             @Override
             public void onResponse(String response) {
@@ -70,28 +80,26 @@ public class LogicaFake {
                 Toast.makeText(context, error.toString(), Toast.LENGTH_SHORT).show();
             }
 
-
-
         }){
-            @Nullable
+
             @Override
-            protected Map<String, String> getParams() throws AuthFailureError {
-                Map<String,String> parametros= new HashMap<String,String>();
+            protected Map<String, String> getParams() throws AuthFailureError {// devuelven parametros post al servidor
+                Map<String,String> parametros= new HashMap<String,String>();// creamos la tabla hash map con sus clave sus valores
                 String valor = medida.getValor();
                 String fecha = medida.getFecha();
 
                  int longitud = medida.getLongitud();
                  String longTxt = String.valueOf(longitud);
 
-                parametros.put("valor",valor);
+                parametros.put("valor",valor);// actualizamos el hashMap usando el put
                 parametros.put("distancia", longTxt);
                 parametros.put("fecha", fecha);
 
                 return parametros;
             }
         };
-        RequestQueue requestQueue= Volley.newRequestQueue(context);
-        requestQueue.add(stringRequest);
-    }
+        RequestQueue requestQueue= Volley.newRequestQueue(context); //creamos la cola de peticiones pasandole el contexto
+        requestQueue.add(stringRequest);//anyadimos la peticion
+    }//fin guardarMedida()
 
 }
